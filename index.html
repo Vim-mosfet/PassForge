@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PassForge — Méthode ANSSI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html, body { height: 100%; }
+  body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+  @keyframes popIn {
+    0%   { opacity: 0; transform: translateY(.35em) scale(.82); }
+    60%  { opacity: 1; }
+    100% { opacity: 1; transform: none; }
+  }
+  .char { animation: popIn .6s cubic-bezier(.2,.9,.25,1) both; }
+
+  @keyframes flashPop {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(1.4); filter: drop-shadow(0 0 22px currentColor); }
+    70%  { transform: scale(1.06); filter: drop-shadow(0 0 10px currentColor); }
+    100% { transform: scale(1); filter: none; }
+  }
+  .flash { animation: flashPop .65s ease-out both; }
+
+  @keyframes panelIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .panel-in { animation: panelIn .5s ease-out both; }
+
+  @keyframes verdictPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(163,230,53,0); }
+    50%      { box-shadow: 0 0 55px 6px rgba(163,230,53,.32); }
+  }
+  .verdict-glow { animation: verdictPulse 2.6s ease-in-out infinite; }
+
+  .neon-emerald { text-shadow: 0 0 26px rgba(52,211,153,.55), 0 0 70px rgba(52,211,153,.22); }
+  .neon-lime    { text-shadow: 0 0 26px rgba(163,230,53,.60), 0 0 70px rgba(163,230,53,.25); }
+
+  #nextBtn kbd {
+    margin-left: .45em; border: 1px solid rgba(15,23,42,.45); border-radius: .3em;
+    padding: 0 .32em; font-size: .7em; font-weight: 800; opacity: .75;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+</style>
+</head>
+<body class="h-full overflow-hidden bg-slate-950 text-white antialiased">
+
+<!-- Classes injectées par JS : présentes pour que Tailwind les compile -->
+<div id="safelist" aria-hidden="true" class="hidden">
+  text-white text-cyan-300 text-yellow-300 text-fuchsia-400 text-fuchsia-300 text-emerald-300 text-slate-400 text-slate-600
+  inline-block whitespace-pre overflow-hidden drop-shadow-[0_0_16px_rgba(52,211,153,0.55)]
+  border-emerald-400/40 bg-emerald-400/10 border-cyan-400/40 bg-cyan-400/10
+  border-yellow-400/40 bg-yellow-400/10 border-fuchsia-400/40 bg-fuchsia-400/10
+  border-slate-700 bg-slate-900/70 text-slate-200
+  border-slate-800 text-slate-600 border-rose-500 border-emerald-500/50 bg-emerald-500/15
+  scale-110 border-emerald-400 bg-emerald-400 text-slate-950 shadow-[0_0_22px_rgba(52,211,153,.65)]
+  border-lime-400/60 bg-lime-400/10 text-lime-300 border-emerald-400/60
+  border-cyan-400/60 border-amber-400/60 text-amber-300 border-rose-500/60 bg-rose-500/10 text-rose-300
+</div>
+
+<div class="relative flex h-full flex-col px-4 py-4 sm:px-8 sm:py-6">
+
+  <!-- Halos -->
+  <div class="pointer-events-none fixed inset-0 overflow-hidden">
+    <div class="absolute -top-1/3 left-1/2 h-[70vh] w-[75vw] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl"></div>
+    <div class="absolute -bottom-1/3 -right-10 h-[60vh] w-[55vw] rounded-full bg-cyan-500/10 blur-3xl"></div>
+    <div class="absolute -bottom-1/4 -left-10 h-[45vh] w-[40vw] rounded-full bg-fuchsia-500/10 blur-3xl"></div>
+  </div>
+
+  <!-- En-tête -->
+  <header class="relative z-10 mx-auto flex w-full max-w-6xl shrink-0 items-center justify-between gap-4">
+    <div class="flex items-baseline gap-3 sm:gap-4">
+      <span class="text-xl font-black tracking-tight sm:text-2xl">PASS<span class="text-emerald-400">FORGE</span></span>
+      <span class="hidden text-xs font-bold uppercase tracking-[0.25em] text-cyan-300/80 sm:inline sm:text-sm">Méthode ANSSI</span>
+    </div>
+    <ol id="stepper" class="flex items-center gap-2 sm:gap-3" aria-label="Progression"></ol>
+  </header>
+
+  <!-- Scène -->
+  <main class="relative z-10 mx-auto flex w-full max-w-6xl flex-1 items-center justify-center overflow-hidden py-4">
+    <div class="w-full">
+
+      <!-- SAISIE -->
+      <section id="panel-0" class="w-full">
+        <div class="mx-auto flex max-w-4xl flex-col items-center gap-5 text-center sm:gap-7">
+          <div>
+            <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-fuchsia-400/40 bg-fuchsia-400/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-fuchsia-300 sm:text-xs">
+              Technique Mnémotechnique · Substitution visuelle
+            </div>
+            <h1 class="text-3xl font-black leading-tight sm:text-5xl">
+              D'une <span class="text-emerald-400">phrase</span> à un
+              <span class="text-cyan-300">mot de passe</span>.
+            </h1>
+            <p class="mt-2 text-base text-slate-400 sm:text-xl">Tapez une phrase de tous les jours, puis appuyez sur Entrée.</p>
+          </div>
+          <div class="w-full">
+            <label for="phrase" class="sr-only">Votre phrase</label>
+            <input id="phrase" type="text" maxlength="80" autocomplete="off" autocapitalize="off" spellcheck="false"
+              placeholder="Une souris verte qui courait dans l'herbe"
+              class="w-full rounded-2xl border-2 border-slate-700 bg-slate-900/80 px-5 py-4 text-center text-xl font-semibold text-white outline-none transition placeholder:text-slate-600 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20 sm:px-8 sm:py-6 sm:text-3xl" />
+            <div class="mt-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+              <button id="exampleBtn" type="button"
+                class="text-sm text-slate-400 underline decoration-slate-600 decoration-dotted underline-offset-4 transition hover:text-emerald-300 sm:text-base">
+                Exemple rapide
+              </button>
+              <span class="text-sm text-slate-500 sm:text-base">puis
+                <kbd class="rounded border border-slate-600 px-2 py-0.5 text-emerald-300">Entrée ↵</kbd>
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ÉTAPES 1 À 3 -->
+      <section id="panel-step" class="hidden w-full">
+        <div class="flex flex-col items-center gap-4 text-center sm:gap-5">
+          <div class="flex flex-col items-center gap-2 sm:flex-row sm:gap-4">
+            <span id="step-badge" class="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-300 sm:text-sm">Étape 1 / 4</span>
+            <h2 id="step-title" class="text-2xl font-black sm:text-4xl">Les initiales</h2>
+          </div>
+
+          <div id="extract-view" class="w-full">
+            <div id="p1-phrase" class="max-w-full break-words text-center font-mono text-lg font-bold leading-snug sm:text-2xl"></div>
+            <div id="p1-result" class="mt-3 opacity-0 transition-opacity duration-700">
+              <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-slate-500 sm:text-sm">Suite brute</p>
+              <p id="p1-value" class="mt-1 break-all font-mono text-4xl font-black text-emerald-400 neon-emerald sm:text-6xl"></p>
+              <p id="p1-note" class="mt-1 text-xs font-semibold text-emerald-300/70 sm:text-base"></p>
+            </div>
+          </div>
+
+          <p id="step-value" class="hidden break-all font-mono text-4xl font-black leading-tight sm:text-6xl"></p>
+
+          <div id="step-legend" class="flex flex-wrap items-center justify-center gap-2 text-xs sm:gap-3 sm:text-base"></div>
+
+          <p id="step-caption" class="mx-auto max-w-3xl text-base text-slate-300 sm:text-2xl"></p>
+        </div>
+      </section>
+
+      <!-- VERDICT -->
+      <section id="panel-verdict" class="hidden w-full">
+        <div class="flex flex-col items-center gap-3 text-center sm:gap-4">
+          <div class="flex flex-col items-center gap-2 sm:flex-row sm:gap-4">
+            <span class="rounded-full border border-lime-400/40 bg-lime-400/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.25em] text-lime-300 sm:text-sm">Résultat</span>
+            <h2 class="text-xl font-black sm:text-3xl">Le mot de passe final</h2>
+          </div>
+
+          <p id="p4-value" class="break-all font-mono text-[clamp(1.8rem,6vw,4.2rem)] font-black leading-none neon-emerald"></p>
+
+          <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-bold uppercase tracking-wider sm:text-sm">
+            <span class="text-cyan-300">■ Majuscules</span>
+            <span class="text-white">■ minuscules</span>
+            <span class="text-yellow-300">■ Chiffres</span>
+            <span class="text-fuchsia-400">■ Symboles</span>
+          </div>
+
+          <div id="p4-box" class="verdict-glow flex w-full max-w-4xl flex-col items-center gap-0.5 rounded-2xl border-2 px-4 py-2.5 sm:py-3.5">
+            <p id="p4-verdict" class="text-xl font-black tracking-tight sm:text-4xl">ROBUSTESSE MAXIMALE</p>
+            <p class="text-sm text-slate-200 sm:text-lg">
+              Temps de craquage estimé : <span id="p4-time" class="font-bold text-white">+ 1 000 ans</span>
+            </p>
+          </div>
+
+          <div class="grid w-full max-w-4xl grid-cols-3 gap-2 sm:gap-3">
+            <div class="rounded-xl border border-slate-800 bg-slate-900/70 px-2 py-2">
+              <p class="text-[10px] uppercase tracking-widest text-slate-500 sm:text-xs">Longueur</p>
+              <p id="p4-len" class="text-lg font-black text-white sm:text-2xl">0</p>
+            </div>
+            <div class="rounded-xl border border-slate-800 bg-slate-900/70 px-2 py-2">
+              <p class="text-[10px] uppercase tracking-widest text-slate-500 sm:text-xs">Alphabet</p>
+              <p id="p4-alpha" class="text-lg font-black text-white sm:text-2xl">0</p>
+            </div>
+            <div class="rounded-xl border border-slate-800 bg-slate-900/70 px-2 py-2">
+              <p class="text-[10px] uppercase tracking-widest text-slate-500 sm:text-xs">Entropie</p>
+              <p id="p4-bits" class="text-lg font-black text-white sm:text-2xl">0</p>
+            </div>
+          </div>
+
+          <p class="text-xs text-slate-400 sm:text-base">
+            <span class="font-semibold text-slate-300">Hydra</span> (10 000 000 000 essais/seconde) :
+            <span id="p4-precise" class="font-semibold text-slate-200"></span>
+          </p>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Pied de page -->
+  <footer class="relative z-10 mx-auto flex w-full max-w-6xl shrink-0 flex-col items-center justify-between gap-2 pb-1 sm:flex-row">
+    <p id="hint" class="text-center text-xs font-medium text-slate-400 sm:text-left sm:text-lg"></p>
+    <button id="nextBtn" type="button"
+      class="inline-flex items-center justify-center rounded-xl bg-emerald-400 px-5 py-2.5 text-base font-black text-slate-950 shadow-[0_0_35px_rgba(52,211,153,.35)] transition hover:bg-emerald-300 active:scale-95 sm:px-6 sm:py-3 sm:text-xl">
+      Forger <kbd>Entrée</kbd>
+    </button>
+  </footer>
+
+</div>
+
+<script>
+/* ============================ LOGIC-START ============================ */
+var EXAMPLE_PHRASE = "Une souris verte qui courait dans l'herbe";
+var HYDRA_GUESSES_PER_SEC = 1e10;
+var SEC_PER_YEAR = 31557600;
+var LEET = { s: '5', i: '!', e: '3', a: '@', o: '0' };
+var PAD_POOL = ['3', '#', '7', '@', '9', '&', '2'];
+var TARGET_LENGTH = 11;
+
+var SEP_RE = /[\s'’\-–—]/;
+
+function isLetter(ch) { return String(ch).toLowerCase() !== String(ch).toUpperCase(); }
+function isDigit(ch) { return /[0-9]/.test(ch); }
+
+function typeOf(ch) {
+  if (isDigit(ch)) { return 'digit'; }
+  if (isLetter(ch)) { return ch === ch.toUpperCase() ? 'upper' : 'lower'; }
+  return 'sym';
+}
+
+/* Initiales : première lettre de chaque mot, en minuscules */
+function analyseInitials(phrase) {
+  var chars = Array.from(String(phrase).trim());
+  var marks = [];
+  var initials = '';
+  for (var i = 0; i < chars.length; i++) {
+    var ch = chars[i];
+    if (SEP_RE.test(ch)) { marks.push({ ch: ch, keep: false }); continue; }
+    var start = i === 0 || SEP_RE.test(chars[i - 1]);
+    var keep = start || isDigit(ch);
+    if (keep) { initials += ch; }
+    marks.push({ ch: ch, keep: keep });
+  }
+  return { marks: marks, initials: initials.toLowerCase() };
+}
+
+/* Une lettre sur trois en majuscule (début de groupe de 3) */
+function buildCaps(str) {
+  var list = Array.from(String(str));
+  return list.map(function (ch, i) {
+    if (!isLetter(ch)) {
+      return { ch: ch, type: typeOf(ch) };
+    }
+    var up = i % 3 === 0 && i + 2 < list.length;
+    return {
+      ch: up ? ch.toUpperCase() : ch.toLowerCase(),
+      type: up ? 'upper' : 'lower'
+    };
+  });
+}
+
+/* Substitution leet + complément jusqu'à 11 caractères */
+function buildLeet(caps) {
+  var chars = caps.map(function (c, i) {
+    var rep = LEET[c.ch.toLowerCase()];
+    if (rep) {
+      return { ch: rep, type: typeOf(rep), kind: 'sub', baseIndex: i, from: c.ch };
+    }
+    return { ch: c.ch, type: c.type, kind: 'keep' };
+  });
+
+  var hasSymbol = chars.some(function (c) { return c.type === 'sym'; });
+  if (!hasSymbol) {
+    chars.splice(Math.min(3, chars.length), 0, { ch: '!', type: 'sym', kind: 'insert' });
+  }
+
+  var p = 0;
+  while (chars.length < TARGET_LENGTH) {
+    var add = PAD_POOL[p % PAD_POOL.length];
+    chars.push({ ch: add, type: typeOf(add), kind: 'pad' });
+    p++;
+  }
+
+  var last = chars[chars.length - 1];
+  if (last.ch !== '?' && last.ch !== '!') {
+    chars[chars.length - 1] = { ch: '?', type: 'sym', kind: 'pad' };
+  }
+  return chars;
+}
+
+function joinChars(items) {
+  return items.map(function (c) { return c.ch; }).join('');
+}
+
+/* Plan d'animation : substitutions, insertion du symbole, ajouts */
+function buildLeetPlan(visual) {
+  function baseIndexBefore(i) {
+    var n = 0;
+    for (var k = 0; k < i; k++) {
+      if (visual[k].kind === 'keep' || visual[k].kind === 'sub') { n++; }
+    }
+    return n;
+  }
+  var plan = [];
+  visual.forEach(function (c, i) {
+    if (c.kind === 'sub') {
+      plan.push({ kind: 'swap', index: baseIndexBefore(i), ch: c.ch, type: c.type });
+    }
+  });
+  visual.forEach(function (c, i) {
+    if (c.kind === 'insert') {
+      plan.push({ kind: 'insert', index: baseIndexBefore(i), ch: c.ch, type: c.type });
+    }
+  });
+  visual.forEach(function (c) {
+    if (c.kind === 'pad') {
+      plan.push({ kind: 'append', ch: c.ch, type: c.type });
+    }
+  });
+  return plan;
+}
+
+/* ---------- Robustesse ---------- */
+function charsetSize(str) {
+  var n = 0;
+  if (/[a-z]/.test(str)) { n += 26; }
+  if (/[A-Z]/.test(str)) { n += 26; }
+  if (/[0-9]/.test(str)) { n += 10; }
+  if (/[^A-Za-z0-9]/.test(str)) { n += 33; }
+  return n || 1;
+}
+
+function entropyBits(str) {
+  return str.length * Math.log2(charsetSize(str));
+}
+
+function crackSeconds(str) {
+  return Math.pow(2, entropyBits(str)) / 2 / HYDRA_GUESSES_PER_SEC;
+}
+
+function humanTime(secs) {
+  if (!isFinite(secs)) { return "un temps astronomique"; }
+  if (secs < 1) { return "moins d'une seconde"; }
+  if (secs < 60) { return Math.round(secs) + ' secondes'; }
+  var min = secs / 60;
+  if (min < 60) { return Math.round(min) + ' minutes'; }
+  var h = min / 60;
+  if (h < 24) { return Math.round(h) + ' heures'; }
+  var d = h / 24;
+  if (d < 31) { return Math.round(d) + ' jours'; }
+  var mo = d / 30.44;
+  if (mo < 12) { return Math.round(mo) + ' mois'; }
+  var y = d / 365.25;
+  if (y < 1000) { return Math.round(y) + ' ans'; }
+  if (y < 10000) { return "plusieurs milliers d'années"; }
+  if (y < 1e6) { return "des centaines de milliers d'années"; }
+  if (y < 1e9) { return "des millions d'années"; }
+  return "des milliards d'années";
+}
+
+function preciseTime(secs) {
+  var y = secs / SEC_PER_YEAR;
+  if (!isFinite(y)) { return 'un temps astronomique'; }
+  if (y >= 1e6) {
+    try {
+      return '≈ ' + new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 }).format(y) + ' ans';
+    } catch (err) {
+      return 'un temps astronomique';
+    }
+  }
+  if (y >= 1) { return '≈ ' + Math.round(y).toLocaleString('fr-FR') + ' ans'; }
+  if (secs < 1) { return "moins d'une seconde"; }
+  if (secs < 60) { return '≈ ' + Math.round(secs) + ' secondes'; }
+  return '≈ ' + Math.round(secs / 60).toLocaleString('fr-FR') + ' minutes';
+}
+
+function verdictFor(secs) {
+  var y = secs / SEC_PER_YEAR;
+  if (y >= 1000) { return 'maximale'; }
+  if (y >= 100) { return 'tres-robuste'; }
+  if (y >= 10) { return 'robuste'; }
+  if (secs >= 86400) { return 'moyen'; }
+  return 'faible';
+}
+/* ============================= LOGIC-END ============================= */
+
+(function () {
+  'use strict';
+
+  var $ = function (sel) { return document.querySelector(sel); };
+
+  var panes = {
+    input: document.getElementById('panel-0'),
+    step: document.getElementById('panel-step'),
+    verdict: document.getElementById('panel-verdict')
+  };
+
+  var stepperEl = $('#stepper');
+  var hintEl = $('#hint');
+  var nextBtn = $('#nextBtn');
+  var inputEl = $('#phrase');
+  var exampleBtn = $('#exampleBtn');
+  var verdictBox = $('#p4-box');
+  var verdictText = $('#p4-verdict');
+
+  var state = { stage: 0, marks: [], initials: '', caps: [], visual: [], final: '', timers: [] };
+
+  /* ---------- réglages d'animation (vidéoprojecteur) ---------- */
+  var GREY_AT = 400;        /* début du grisage */
+  var FADE_AT = 1000;       /* début de l'effacement (1,5 s) */
+  var COLLAPSE_AT = 2600;   /* rapprochement des initiales */
+  var COLLAPSE_STAGGER = 30;
+  var STEP_DELAY = 900;     /* début des transformations */
+  var TRANSFORM_STEP = 300; /* une lettre transformée toutes les 300 ms */
+
+  var TYPE_CLASS = {
+    upper: 'text-cyan-300',
+    lower: 'text-white',
+    digit: 'text-yellow-300',
+    sym: 'text-fuchsia-400'
+  };
+
+  var CHIP_CLASS = {
+    emerald: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300',
+    cyan: 'border-cyan-400/40 bg-cyan-400/10 text-cyan-300',
+    yellow: 'border-yellow-400/40 bg-yellow-400/10 text-yellow-300',
+    fuchsia: 'border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-300',
+    slate: 'border-slate-700 bg-slate-900/70 text-slate-200'
+  };
+
+  var TIERS = {
+    'maximale': { label: 'ROBUSTESSE MAXIMALE', box: 'border-lime-400/60 bg-lime-400/10', text: 'text-lime-300 neon-lime' },
+    'tres-robuste': { label: 'TRÈS ROBUSTE', box: 'border-emerald-400/60 bg-emerald-400/10', text: 'text-emerald-300 neon-emerald' },
+    'robuste': { label: 'ROBUSTE', box: 'border-cyan-400/60 bg-cyan-400/10', text: 'text-cyan-300' },
+    'moyen': { label: 'MOYEN', box: 'border-amber-400/60 bg-amber-400/10', text: 'text-amber-300' },
+    'faible': { label: 'FAIBLE', box: 'border-rose-500/60 bg-rose-500/10', text: 'text-rose-300' }
+  };
+
+  /* ------------------------- utilitaires ------------------------- */
+
+  function clearTimers() {
+    state.timers.forEach(function (t) { clearTimeout(t); });
+    state.timers = [];
+  }
+
+  function later(fn, ms) {
+    var t = setTimeout(fn, ms);
+    state.timers.push(t);
+    return t;
+  }
+
+  function chip(color, label) {
+    return '<span class="rounded-full border px-3 py-1 font-semibold ' + CHIP_CLASS[color] + '">' + label + '</span>';
+  }
+
+  function flash(el) {
+    el.classList.remove('char');
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
+  }
+
+  function applyAction(el, spans, act) {
+    if (act.kind === 'swap') {
+      var target = spans[act.index];
+      if (!target) { return; }
+      target.textContent = act.ch;
+      target.className = 'inline-block ' + TYPE_CLASS[act.type];
+      flash(target);
+      return;
+    }
+    var node = document.createElement('span');
+    node.textContent = act.ch;
+    node.className = 'inline-block ' + TYPE_CLASS[act.type];
+    if (act.kind === 'insert') {
+      el.insertBefore(node, spans[act.index] || null);
+      spans.splice(act.index, 0, node);
+    } else {
+      el.appendChild(node);
+      spans.push(node);
+    }
+    flash(node);
+  }
+
+  function renderAssembly(el, base, plan) {
+    el.innerHTML = '';
+    var spans = base.map(function (c, i) {
+      var s = document.createElement('span');
+      s.textContent = c.ch;
+      s.className = 'char inline-block ' + TYPE_CLASS[c.type];
+      s.style.animationDelay = Math.min(i * 70, 700) + 'ms';
+      el.appendChild(s);
+      return s;
+    });
+
+    var delay = STEP_DELAY;
+    plan.forEach(function (act) {
+      later(function () { applyAction(el, spans, act); }, delay);
+      delay += TRANSFORM_STEP;
+    });
+    return spans;
+  }
+
+  /* ------------------------- étape 1 : extraction ------------------------- */
+
+  function renderExtraction() {
+    var phraseEl = $('#p1-phrase');
+    var resultEl = $('#p1-result');
+
+    phraseEl.innerHTML = '';
+    resultEl.classList.add('opacity-0');
+    $('#p1-value').textContent = state.initials;
+    $('#p1-note').textContent = state.initials.length + ' lettres gardées';
+
+    var spans = state.marks.map(function (m) {
+      var s = document.createElement('span');
+      s.textContent = m.ch;
+      s.className = 'inline-block whitespace-pre ' + (m.keep ? 'text-emerald-300' : 'text-slate-400');
+      s.style.transition = 'color .6s ease, opacity 1.5s ease, width 1.4s ease, transform 1.4s ease';
+      phraseEl.appendChild(s);
+      return s;
+    });
+
+    requestAnimationFrame(function () {
+      spans.forEach(function (s) {
+        s.style.width = s.getBoundingClientRect().width + 'px';
+        s.classList.add('overflow-hidden');
+      });
+
+      later(function () {
+        spans.forEach(function (s, i) {
+          if (!state.marks[i].keep) { s.style.color = '#334155'; }
+        });
+      }, GREY_AT);
+
+      later(function () {
+        spans.forEach(function (s, i) {
+          if (!state.marks[i].keep) {
+            s.style.opacity = '0';
+            s.style.transform = 'scale(.85)';
+          }
+        });
+      }, FADE_AT);
+
+      later(function () {
+        spans.forEach(function (s, i) {
+          s.style.transitionDelay = (i * COLLAPSE_STAGGER) + 'ms';
+          if (!state.marks[i].keep) { s.style.width = '0px'; }
+        });
+        later(function () {
+          resultEl.classList.remove('opacity-0');
+        }, (spans.length - 1) * COLLAPSE_STAGGER + 1450);
+      }, COLLAPSE_AT);
+    });
+  }
+
+  /* ------------------------- étapes 2 et 3 ------------------------- */
+
+  function renderStep(n) {
+    clearTimers();
+    $('#step-badge').textContent = 'Étape ' + n + ' / 4';
+
+    var extractView = $('#extract-view');
+    var valueEl = $('#step-value');
+
+    if (n === 1) {
+      extractView.classList.remove('hidden');
+      valueEl.classList.add('hidden');
+      $('#step-title').textContent = 'Les initiales';
+      $('#step-caption').innerHTML = 'On garde la <span class="font-bold text-emerald-300">première lettre</span> de chaque mot, en minuscules : facile à retrouver… et à deviner.';
+      $('#step-legend').innerHTML = chip('emerald', 'lettres gardées');
+      renderExtraction();
+      return;
+    }
+
+    extractView.classList.add('hidden');
+    valueEl.classList.remove('hidden');
+
+    if (n === 2) {
+      var initialsChars = Array.from(state.initials).map(function (ch) {
+        return { ch: ch, type: typeOf(ch) };
+      });
+      var plan = [];
+      state.caps.forEach(function (c, i) {
+        if (c.type === 'upper') {
+          plan.push({ kind: 'swap', index: i, ch: c.ch, type: 'upper' });
+        }
+      });
+      $('#step-title').textContent = 'Majuscules / minuscules';
+      $('#step-legend').innerHTML = chip('cyan', '1 lettre sur 3 en MAJUSCULE') + chip('slate', 'le reste en minuscule');
+      $('#step-caption').innerHTML = 'Une lettre sur trois passe en <span class="font-bold text-cyan-300">MAJUSCULE</span> : le motif devient irrégulier et l\'alphabet utilisé double.';
+      renderAssembly($('#step-value'), initialsChars, plan);
+      return;
+    }
+
+    var base = state.caps.map(function (c) {
+      return { ch: c.ch, type: c.type };
+    });
+    $('#step-title').textContent = 'Substitution visuelle';
+    $('#step-legend').innerHTML =
+      chip('yellow', 'chiffres') + chip('fuchsia', 'symboles') +
+      '<span class="rounded-lg border border-slate-700 bg-slate-900/70 px-2 py-1 font-mono text-[11px] text-slate-300 sm:text-sm">s→5 · i→! · e→3 · a→@ · o→0</span>';
+    $('#step-caption').innerHTML = 'Chaque lettre devient un <span class="font-bold text-yellow-300">chiffre</span> ou un <span class="font-bold text-fuchsia-300">symbole</span> qui lui ressemble, puis on complète avec un symbole au milieu, un chiffre et un <span class="font-bold text-fuchsia-300">?</span> final.';
+    renderAssembly($('#step-value'), base, buildLeetPlan(state.visual));
+  }
+
+  /* ------------------------- verdict ------------------------- */
+
+  function renderVerdict() {
+    clearTimers();
+    var finalStr = state.final;
+    var secs = crackSeconds(finalStr);
+    var tier = TIERS[verdictFor(secs)];
+
+    var el = $('#p4-value');
+    el.innerHTML = '';
+    state.visual.forEach(function (c, i) {
+      var s = document.createElement('span');
+      s.textContent = c.ch;
+      s.className = 'char inline-block ' + TYPE_CLASS[c.type];
+      s.style.animationDelay = Math.min(i * 70, 1200) + 'ms';
+      el.appendChild(s);
+    });
+
+    verdictBox.className = 'verdict-glow flex w-full max-w-4xl flex-col items-center gap-0.5 rounded-2xl border-2 px-4 py-2.5 sm:py-3.5 ' + tier.box;
+    verdictText.className = 'text-xl font-black tracking-tight sm:text-4xl ' + tier.text;
+    verdictText.textContent = tier.label;
+
+    $('#p4-time').textContent = verdictFor(secs) === 'maximale' ? '+ 1 000 ans' : humanTime(secs);
+    $('#p4-len').textContent = finalStr.length + ' car.';
+    $('#p4-alpha').textContent = charsetSize(finalStr);
+    $('#p4-bits').textContent = Math.round(entropyBits(finalStr)) + ' bits';
+    $('#p4-precise').textContent = preciseTime(secs);
+  }
+
+  /* ------------------------- navigation ------------------------- */
+
+  function updateChrome() {
+    Array.prototype.forEach.call(stepperEl.children, function (li, i) {
+      var n = i + 1;
+      var cls = 'flex h-8 w-8 items-center justify-center rounded-full border text-xs font-black transition-all duration-300 sm:h-10 sm:w-10 sm:text-sm';
+      if (state.stage === 0) {
+        cls += ' border-slate-800 text-slate-600';
+      } else if (n < state.stage) {
+        cls += ' border-emerald-500/50 bg-emerald-500/15 text-emerald-300';
+      } else if (n === state.stage) {
+        cls += ' scale-110 border-emerald-400 bg-emerald-400 text-slate-950 shadow-[0_0_22px_rgba(52,211,153,.65)]';
+      } else {
+        cls += ' border-slate-800 text-slate-600';
+      }
+      li.className = cls;
+    });
+
+    if (state.stage === 0) {
+      hintEl.textContent = 'Tapez une phrase, puis Entrée.';
+      nextBtn.innerHTML = 'Forger <kbd>Entrée</kbd>';
+    } else if (state.stage < 4) {
+      hintEl.textContent = 'Entrée pour révéler l\'étape suivante.';
+      nextBtn.innerHTML = 'Étape suivante <kbd>Entrée</kbd>';
+    } else {
+      hintEl.textContent = 'Entrée ou R pour une nouvelle phrase.';
+      nextBtn.innerHTML = 'Nouvelle phrase <kbd>R</kbd>';
+    }
+  }
+
+  function showStage(n) {
+    state.stage = n;
+    var key = n === 0 ? 'input' : (n === 4 ? 'verdict' : 'step');
+
+    Object.keys(panes).forEach(function (k) {
+      panes[k].classList.toggle('hidden', k !== key);
+    });
+
+    var pane = panes[key];
+    pane.classList.remove('panel-in');
+    void pane.offsetWidth;
+    pane.classList.add('panel-in');
+
+    if (n === 1 || n === 2 || n === 3) { renderStep(n); }
+    if (n === 4) { renderVerdict(); }
+
+    updateChrome();
+  }
+
+  /* ------------------------- actions ------------------------- */
+
+  function start() {
+    var phrase = inputEl.value.trim();
+    if (!phrase) { flashError(); return; }
+
+    var parsed = analyseInitials(phrase);
+    if (!parsed.initials) { flashError(); return; }
+
+    clearTimers();
+    state.marks = parsed.marks;
+    state.initials = parsed.initials;
+    state.caps = buildCaps(parsed.initials);
+    state.visual = buildLeet(state.caps);
+    state.final = joinChars(state.visual);
+
+    inputEl.classList.remove('border-rose-500');
+    showStage(1);
+  }
+
+  function flashError() {
+    inputEl.focus();
+    inputEl.classList.add('border-rose-500');
+    later(function () { inputEl.classList.remove('border-rose-500'); }, 900);
+  }
+
+  function next() {
+    if (state.stage === 0) { start(); return; }
+    if (state.stage >= 4) { reset(); return; }
+    showStage(state.stage + 1);
+  }
+
+  function reset() {
+    clearTimers();
+    state.marks = [];
+    state.initials = '';
+    state.caps = [];
+    state.visual = [];
+    state.final = '';
+    inputEl.value = '';
+    inputEl.classList.remove('border-rose-500');
+    $('#p1-phrase').innerHTML = '';
+    $('#p1-value').textContent = '';
+    $('#p1-note').textContent = '';
+    $('#step-value').innerHTML = '';
+    $('#p1-result').classList.add('opacity-0');
+    showStage(0);
+    inputEl.focus();
+  }
+
+  /* ------------------------- événements ------------------------- */
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (state.stage === 0) { start(); }
+      else if (state.stage < 4) { showStage(state.stage + 1); }
+      else { reset(); }
+      return;
+    }
+
+    if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey && !e.altKey && state.stage >= 1) {
+      e.preventDefault();
+      reset();
+    }
+  });
+
+  nextBtn.addEventListener('click', next);
+
+  exampleBtn.addEventListener('click', function () {
+    inputEl.value = EXAMPLE_PHRASE;
+    inputEl.focus();
+  });
+
+  document.addEventListener('click', function () {
+    if (state.stage === 0 && document.activeElement !== inputEl) { inputEl.focus(); }
+  });
+
+  /* ------------------------- init ------------------------- */
+
+  for (var i = 1; i <= 4; i++) {
+    var li = document.createElement('li');
+    li.textContent = String(i);
+    li.className = 'flex h-8 w-8 items-center justify-center rounded-full border text-xs font-black sm:h-10 sm:w-10 sm:text-sm';
+    stepperEl.appendChild(li);
+  }
+
+  showStage(0);
+  inputEl.focus();
+})();
+</script>
+</body>
+</html>
